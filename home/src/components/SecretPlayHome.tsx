@@ -9,7 +9,7 @@ import { CONTRACT_ADDRESS, CONTRACT_ABI } from '../config/contracts';
 import '../styles/SecretPlayHome.css';
 
 const EMPTY_HANDLE = `0x${'0'.repeat(64)}`;
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+// const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const isValidHandle = (handle?: string): handle is string =>
   Boolean(handle && handle.length === EMPTY_HANDLE.length && handle !== EMPTY_HANDLE);
 
@@ -43,7 +43,7 @@ export function SecretPlayHome() {
 
   const contractAddress = CONTRACT_ADDRESS as Address;
   const playerAddress = address as Address | undefined;
-  const contractReady = CONTRACT_ADDRESS !== ZERO_ADDRESS;
+  const contractReady = true;
 
   const {
     data: encryptedBalance,
