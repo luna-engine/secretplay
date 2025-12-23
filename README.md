@@ -1,110 +1,187 @@
-# FHEVM Hardhat Template
+# SecretPlay
 
-A Hardhat-based template for developing Fully Homomorphic Encryption (FHE) enabled Solidity smart contracts using the
-FHEVM protocol by Zama.
+SecretPlay is an encrypted builder game on FHEVM (Zama). Players buy encrypted gold with ETH, choose one of four
+buildings in private, and only decrypt their own state when they decide. The chain only stores ciphertext while still
+allowing on-chain rules, balances, and costs to be enforced.
 
-## Quick Start
+## Project goals
 
-For detailed instructions see:
-[FHEVM Hardhat Quick Start Tutorial](https://docs.zama.ai/protocol/solidity-guides/getting-started/quick-start-tutorial)
+- Prove that on-chain games can keep player choices and balances private without relying on centralized servers.
+- Demonstrate a simple but complete end-to-end FHE flow: encrypt input, submit on-chain, decrypt with user consent.
+- Provide a clean reference stack for FHEVM contracts + a modern React UI.
 
-### Prerequisites
+## Problems solved
 
-- **Node.js**: Version 20 or higher
-- **npm or yarn/pnpm**: Package manager
+- **Private balances:** gold is stored as encrypted `euint64`, so outsiders cannot read holdings.
+- **Private choices:** building selections are encrypted `euint8` values, hidden from observers.
+- **Trust-minimized gameplay:** contract enforces costs and updates without ever seeing plaintext.
+- **User-controlled decryption:** only the wallet owner can reveal their own data via the Zama relayer flow.
 
-### Installation
+## Advantages
 
-1. **Install dependencies**
+- **Privacy by default:** ciphertext on-chain, cleartext only off-chain for the user.
+- **Deterministic rules:** spending and selection rules are enforced on-chain even though inputs are encrypted.
+- **Minimal surface area:** one compact contract, a small set of tasks, and a focused frontend.
+- **Upgradeable UX path:** the UI is ready for future encrypted features without breaking the contract.
 
-   ```bash
-   npm install
-   ```
+## Features
 
-2. **Set up environment variables**
+- Buy gold with ETH at a fixed rate (1 ETH = 1,000,000 gold).
+- Choose a building type (1-4) with encrypted input and enforced costs.
+- Read encrypted balance and building handle on-chain.
+- Decrypt balance or building choice on demand with user signature.
+- Frontend dashboard for wallet status, encrypted handles, and decrypted results.
 
-   ```bash
-   npx hardhat vars set MNEMONIC
+## How it works
 
-   # Set your Infura API key for network access
-   npx hardhat vars set INFURA_API_KEY
+1. **Buy gold:** the contract converts ETH into gold units and adds them to an encrypted balance.
+2. **Encrypt choice:** the frontend encrypts a building id using the Zama relayer SDK.
+3. **On-chain update:** the contract checks encrypted balance and encrypted cost, then updates state.
+4. **Decrypt when ready:** the frontend asks the user to sign a typed message and requests decryption.
 
-   # Optional: Set Etherscan API key for contract verification
-   npx hardhat vars set ETHERSCAN_API_KEY
-   ```
+## Smart contract details
 
-3. **Compile and test**
+- `SecretPlay.sol` stores balances (`euint64`) and building ids (`euint8`) per player.
+- Costs are enforced in encrypted form:
+  - Building 1: 100 gold
+  - Building 2: 200 gold
+  - Building 3: 400 gold
+  - Building 4: 1000 gold
+- If a user cannot afford the cost, state remains unchanged (encrypted conditional update).
+- Encrypted values are explicitly allowed for the contract and the player address.
 
-   ```bash
-   npm run compile
-   npm run test
-   ```
+## Frontend experience
 
-4. **Deploy to local network**
+The UI lives in `home/` and provides:
 
-   ```bash
-   # Start a local FHEVM-ready node
-   npx hardhat node
-   # Deploy to local network
-   npx hardhat deploy --network localhost
-   ```
+- Wallet connection via RainbowKit/Wagmi.
+- Encrypted balance and building handle reads via `viem`.
+- Transactions (buy/build) via `ethers`.
+- Decryption flow using the Zama relayer SDK (EIP-712 signature).
 
-5. **Deploy to Sepolia Testnet**
+## Tech stack
 
-   ```bash
-   # Deploy to Sepolia
-   npx hardhat deploy --network sepolia
-   # Verify contract on Etherscan
-   npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
-   ```
+- **Contracts:** Solidity, FHEVM (Zama), hardhat, hardhat-deploy
+- **Testing:** hardhat, chai, FHEVM testing helpers
+- **Frontend:** React + Vite, TypeScript, Wagmi, Viem, Ethers v6
+- **Encryption/Decryption:** `@zama-fhe/relayer-sdk`
+- **Styling:** hand-written CSS (no Tailwind)
 
-6. **Test on Sepolia Testnet**
-
-   ```bash
-   # Once deployed, you can run a simple test on Sepolia.
-   npx hardhat test --network sepolia
-   ```
-
-## 📁 Project Structure
+## Project structure
 
 ```
-fhevm-hardhat-template/
-├── contracts/           # Smart contract source files
-│   └── FHECounter.sol   # Example FHE counter contract
-├── deploy/              # Deployment scripts
-├── tasks/               # Hardhat custom tasks
-├── test/                # Test files
-├── hardhat.config.ts    # Hardhat configuration
-└── package.json         # Dependencies and scripts
+secretplay/
+├── contracts/              # Solidity contracts
+│   └── SecretPlay.sol
+├── deploy/                 # Hardhat deploy scripts
+├── deployments/            # Deployment artifacts (per network)
+├── tasks/                  # Hardhat tasks for encrypted flows
+├── test/                   # Contract tests
+├── home/                   # React frontend (Vite)
+├── hardhat.config.ts       # Hardhat configuration
+└── README.md               # You are here
 ```
 
-## 📜 Available Scripts
+## Setup
 
-| Script             | Description              |
-| ------------------ | ------------------------ |
-| `npm run compile`  | Compile all contracts    |
-| `npm run test`     | Run all tests            |
-| `npm run coverage` | Generate coverage report |
-| `npm run lint`     | Run linting checks       |
-| `npm run clean`    | Clean build artifacts    |
+### Requirements
 
-## 📚 Documentation
+- Node.js 20+
+- npm
+- A wallet with Sepolia ETH for deployment and testing
 
-- [FHEVM Documentation](https://docs.zama.ai/fhevm)
-- [FHEVM Hardhat Setup Guide](https://docs.zama.ai/protocol/solidity-guides/getting-started/setup)
-- [FHEVM Testing Guide](https://docs.zama.ai/protocol/solidity-guides/development-guide/hardhat/write_test)
-- [FHEVM Hardhat Plugin](https://docs.zama.ai/protocol/solidity-guides/development-guide/hardhat)
+### Install dependencies
 
-## 📄 License
+```bash
+npm install
+```
 
-This project is licensed under the BSD-3-Clause-Clear License. See the [LICENSE](LICENSE) file for details.
+### Environment variables (contracts only)
 
-## 🆘 Support
+Create a `.env` file in the project root with:
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/zama-ai/fhevm/issues)
-- **Documentation**: [FHEVM Docs](https://docs.zama.ai)
-- **Community**: [Zama Discord](https://discord.gg/zama)
+```
+INFURA_API_KEY=your_infura_key
+PRIVATE_KEY=your_wallet_private_key
+ETHERSCAN_API_KEY=your_etherscan_key
+```
 
----
+`PRIVATE_KEY` is required for Sepolia deployment. The project does not use mnemonics.
 
-**Built with ❤️ by the Zama team**
+### Compile and test
+
+```bash
+npm run compile
+npm run test
+```
+
+### Deploy
+
+Local deployment (Hardhat node):
+
+```bash
+npx hardhat node
+npx hardhat deploy --network localhost
+```
+
+Sepolia deployment:
+
+```bash
+npx hardhat deploy --network sepolia
+```
+
+### Update frontend contract config
+
+After deploying to Sepolia, copy the ABI and contract address into the frontend:
+
+- ABI source: `deployments/sepolia/SecretPlay.json` (copy the ABI array only)
+- Frontend config: `home/src/config/contracts.ts`
+
+Set `CONTRACT_ADDRESS` to the deployed address and replace `CONTRACT_ABI` with the ABI array.
+
+### Run the frontend
+
+```bash
+cd home
+npm install
+npm run dev
+```
+
+Connect a wallet to Sepolia and use the UI to buy gold, build, and decrypt.
+
+## Hardhat tasks
+
+The `tasks/SecretPlay.ts` file exposes CLI helpers for encrypted flows:
+
+- `npx hardhat --network localhost task:buy-gold --eth 0.001`
+- `npx hardhat --network localhost task:build --building 2`
+- `npx hardhat --network localhost task:decrypt-balance`
+- `npx hardhat --network localhost task:decrypt-building`
+
+Use `npx hardhat task:address` to print the deployed contract address.
+
+## Usage flow (UI)
+
+1. Connect wallet.
+2. Buy encrypted gold with ETH.
+3. Select a building and submit encrypted input.
+4. Decrypt balance or building when ready.
+
+## Limitations and considerations
+
+- Encrypted state can only be decrypted by the wallet that owns it.
+- Contract reads return encrypted handles, not clear values.
+- Building selection only stores the latest choice per player.
+- The frontend expects a valid Sepolia deployment and ABI in `home/src/config/contracts.ts`.
+
+## Future roadmap
+
+- Multi-building inventory with encrypted counts.
+- Encrypted leaderboard and achievement badges.
+- Time-based upgrades and build queues using encrypted timestamps.
+- Gas and UX optimizations for larger encrypted state.
+- Optional contract events for frontend analytics without exposing plaintext.
+
+## License
+
+BSD-3-Clause-Clear. See `LICENSE`.
